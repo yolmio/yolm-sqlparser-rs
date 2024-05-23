@@ -1445,6 +1445,7 @@ impl fmt::Display for Join {
         fn prefix(constraint: &JoinConstraint) -> &'static str {
             match constraint {
                 JoinConstraint::Natural => "NATURAL ",
+                JoinConstraint::Auto => "AUTO ",
                 _ => "",
             }
         }
@@ -1557,6 +1558,7 @@ pub enum JoinConstraint {
     On(Expr),
     Using(Vec<Ident>),
     Natural,
+    Auto,
     None,
 }
 

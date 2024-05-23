@@ -8337,7 +8337,13 @@ impl<'a> Parser<'a> {
                     join_operator: JoinOperator::OuterApply,
                 }
             } else {
+                let auto = self.parse_keyword(Keyword::AUTO);
                 let natural = self.parse_keyword(Keyword::NATURAL);
+                if natural && auto {
+                    return Err(ParserError::ParserError(
+                        "cannot have join be both NATURAL and AUTO".into(),
+                    ));
+                }
                 let peek_keyword = if let Token::Word(w) = self.peek_token().token {
                     w.keyword
                 } else {
@@ -8410,10 +8416,13 @@ impl<'a> Parser<'a> {
                     _ if natural => {
                         return self.expected("a join type after NATURAL", self.peek_token());
                     }
+                    _ if auto => {
+                        return self.expected("a join type after JOIN", self.peek_token());
+                    }
                     _ => break,
                 };
                 let relation = self.parse_table_factor()?;
-                let join_constraint = self.parse_join_constraint(natural)?;
+                let join_constraint = self.parse_join_constraint(natural, auto)?;
                 Join {
                     relation,
                     join_operator: join_operator_type(join_constraint),
@@ -9080,8 +9089,14 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub fn parse_join_constraint(&mut self, natural: bool) -> Result<JoinConstraint, ParserError> {
-        if natural {
+    pub fn parse_join_constraint(
+        &mut self,
+        natural: bool,
+        auto: bool,
+    ) -> Result<JoinConstraint, ParserError> {
+        if auto {
+            Ok(JoinConstraint::Auto)
+        } else if natural {
             Ok(JoinConstraint::Natural)
         } else if self.parse_keyword(Keyword::ON) {
             let constraint = self.parse_expr()?;
